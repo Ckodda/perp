@@ -119,4 +119,4 @@ Ahora puedes acceder a la aplicación en tu navegador, generalmente en `http://l
 
 ## 📧 Contacto
 
-* **Tu Nombre/Alias:** [Tu Perfil de GitHub](https://github.com/tu_usuario) | [Tu Correo Electrónico](mailto:tu.email@example.com)
+* **Ckodda:** [Perfil Github](https://github.com/Ckodda) | [Correo](mailto:corbarda@gmail.com)
