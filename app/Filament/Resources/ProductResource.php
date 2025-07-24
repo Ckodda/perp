@@ -2,16 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Exports\ProductExporter;
 use App\Filament\Resources\ProductResource\Pages;
-use App\Filament\Resources\ProductResource\RelationManagers;
 use App\Models\Product;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\ExportAction;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+// use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+// use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class ProductResource extends Resource
 {
@@ -39,7 +43,7 @@ class ProductResource extends Resource
 
                         Forms\Components\Select::make('unit_of_measure')
                             ->required()
-                            ->label('Unidad de Medida (Kg)')
+                            ->label('Unidad de Medida')
                             ->options([
                                 'UNIT' => 'Unidad',
                                 'LITER' => 'Litro',
@@ -59,9 +63,14 @@ class ProductResource extends Resource
                             ->nullable()
                             ->uploadProgressIndicatorPosition('left')
                             ->maxSize(1024),
-
-                            Forms\Components\Toggle::make('is_active')
+                        Forms\Components\Select::make('product_category_id')
+                            ->label('Categoría del Producto')
+                            ->relationship('productCategory', 'name')
+                            ->searchable()
+                            ->required(),
+                        Forms\Components\Toggle::make('is_active')
                             ->label('Estado del Producto')
+                            ->live()
                             ->helperText(fn(string $state): string => $state ? 'El producto está activo.' : 'El producto está inactivo.')
                             ->hiddenOn('create')
                             ->required(),
@@ -149,54 +158,96 @@ class ProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([
+                ExportAction::make()
+                    ->label('Exportar Productos')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->exporter(ProductExporter::class)
+            ])
             ->columns([
-                Tables\Columns\TextColumn::make('company.id')
-                    ->numeric()
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('company.corporate_name')
+                    ->label('Empresa')
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
+                    ->label('Nombre del Producto')
+                    ->searchable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('sku')
                     ->label('SKU')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('unit_of_measure')
-                    ->searchable(),
+                    ->label('Unidad de Medida')
+                    ->searchable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('purchase_price')
+                    ->label('Precio de Compra')
                     ->numeric()
+                    ->toggleable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('purchaseCurrency.code')
+                    ->sortable()
+                    ->toggleable()
+                    ->label('Moneda de Compra'),
                 Tables\Columns\TextColumn::make('sale_price')
                     ->numeric()
+                    ->toggleable()
+                    ->label('Precio de Venta')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('saleCurrency.code')
+                    ->default('No definido')
+                    ->label('Moneda de Venta')
+                    ->toggleable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('productCategory.name')
+                    ->label('Categoría del Producto')
+                    ->toggleable()
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('stock')
                     ->numeric()
+                    ->toggleable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('min_stock_alert')
                     ->numeric()
+                    ->label('Alerta de Stock Mínimo')
+                    ->toggleable()
                     ->sortable(),
-                Tables\Columns\IconColumn::make('is_active')
-                    ->boolean(),
+                Tables\Columns\TextColumn::make('is_active')
+                    ->label('Estado del Producto')
+                    ->badge()
+                    ->color(fn($state) => $state ? 'success' : 'danger')
+                    ->toggleable()
+                    ->formatStateUsing(fn($state) => $state ? 'Activo' : 'Inactivo'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
+                
             ]);
     }
 
@@ -216,4 +267,13 @@ class ProductResource extends Resource
             'view' => Pages\ViewProduct::route('/{record}'),
         ];
     }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
+    }
+    
 }

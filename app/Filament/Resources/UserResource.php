@@ -141,4 +141,11 @@ class UserResource extends Resource implements HasShieldPermissions
             'view'=> Pages\ViewUser::route('/{record}')
         ];
     }
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
+    }
 }

@@ -14,6 +14,7 @@ class Product extends Model
 
     protected $fillable = [
         'company_id',
+        'product_category_id', 
         'name',
         'sku',
         'unit_of_measure',
@@ -62,5 +63,10 @@ class Product extends Model
     public function saleCurrency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'sale_currency_id');
+    }
+
+    public function productCategory(): BelongsTo
+    {
+        return $this->belongsTo(ProductCategory::class);
     }
 }
