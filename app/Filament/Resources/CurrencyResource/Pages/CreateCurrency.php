@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateCurrency extends CreateRecord
 {
     protected static string $resource = CurrencyResource::class;
+    
+    protected function getRedirectUrl(): string
+    {
+        return CurrencyResource::getUrl('view',['record'=>$this->record->getKey()]);
+    }
 }

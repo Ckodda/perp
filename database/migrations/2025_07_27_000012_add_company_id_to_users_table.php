@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-
-            $table->string('image')->nullable()->after('description');
+        Schema::table('users', function (Blueprint $table) {
+            //
+            $table->foreignId('company_id')
+                ->nullable()
+                ->constrained('companies')
+                ->onDelete('cascade');
         });
     }
 
@@ -22,9 +25,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
+        Schema::table('users', function (Blueprint $table) {
             //
-            $table->dropColumn('image');
+            $table->dropColumn('company_id');
         });
     }
 };

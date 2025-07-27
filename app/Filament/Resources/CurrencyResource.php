@@ -16,6 +16,12 @@ class CurrencyResource extends Resource
 {
     protected static ?string $model = Currency::class;
 
+    protected static ?string $navigationGroup = 'Configuración';
+
+    protected static ?string $modelLabel = 'Moneda';
+
+    protected static ?string $pluralModelLabel = 'Monedas';
+
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
@@ -54,6 +60,9 @@ class CurrencyResource extends Resource
                     ->required(),
                 Forms\Components\Toggle::make('is_active')
                     ->label('Estado de la moneda')
+                    ->live()
+                    ->helperText(fn(string $state): string => $state ? 'Moneda ACTIVA' : 'Moneda INACTIVA')
+                    ->hiddenOn('create')
                     ->required(),
             ]);
     }
@@ -96,6 +105,7 @@ class CurrencyResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -118,6 +128,7 @@ class CurrencyResource extends Resource
             'index' => Pages\ListCurrencies::route('/'),
             'create' => Pages\CreateCurrency::route('/create'),
             'edit' => Pages\EditCurrency::route('/{record}/edit'),
+            'view' => Pages\ViewCurrency::route('/{record}'),
         ];
     }
     public static function getEloquentQuery(): Builder

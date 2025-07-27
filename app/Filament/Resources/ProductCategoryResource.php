@@ -17,12 +17,24 @@ class ProductCategoryResource extends Resource
 {
     protected static ?string $model = ProductCategory::class;
 
+    protected static ?string $navigationGroup = 'Inventario y Almacenes';
+
+    protected static ?string $modelLabel = 'Categoría de Producto';
+
+    protected static ?string $pluralModelLabel = 'Categorías de Productos';
+
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
+                Forms\Components\Select::make('company_id')
+                    ->relationship('company', 'corporate_name')
+                    ->label('Empresa vinculada')
+                    ->required()
+                    ->searchable()
+                    ->preload(),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->label('Nombre de categoría')

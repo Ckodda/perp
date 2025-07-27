@@ -13,14 +13,15 @@ return new class extends Migration
     {
         Schema::create('companies', function (Blueprint $table) {
             $table->id();
-            $table->string('corporate_name');
-            $table->string('ruc')->unique();
-            $table->string('address')->nullable();
+            $table->string('corporate_name')->unique()->comment('Razón Social o Nombre de la Empresa');
+            $table->string('ruc')->unique()->nullable()->comment('Registro Único de Contribuyentes');
+            $table->string('address')->nullable()->comment('Dirección principal');
             $table->string('phone_number')->nullable();
-            $table->string('email')->nullable();
+            $table->string('email')->unique()->nullable();
             $table->string('logo_url')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();   
+            $table->boolean('is_active')->default(true)->comment('Indica si la empresa está activa');
+            $table->timestamps();
+            $table->softDeletes();
         });
     }
 

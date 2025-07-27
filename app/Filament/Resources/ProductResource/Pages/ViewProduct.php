@@ -12,6 +12,7 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewProduct extends ViewRecord
 {
     protected static string $resource = ProductResource::class;
+    
     protected function getHeaderActions(): array
     {
         return [
@@ -24,9 +25,9 @@ class ViewProduct extends ViewRecord
             EditAction::make()
             ->icon('heroicon-o-pencil'),
             DeleteAction::make()
-                ->modalHeading('Eliminar Empresa')
+                ->modalHeading('Eliminar Producto')
                 ->label('')
-                ->modalDescription('Advertencia: Esta acción eliminará los datos de la empresa, no se podrá deshacer ni crear una nueva empresa con el mismo número de RUC. ¿Está seguro de continuar con la eliminación?')->icon('heroicon-o-trash'),
+                ->modalDescription('Advertencia: Esta acción eliminará los datos del producto, no se podrá deshacer ni crear un nuevo producto con el mismo SKU. ¿Está seguro de continuar con la eliminación?')->icon('heroicon-o-trash'),
         ];
     }
 }

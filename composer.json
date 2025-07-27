@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "bezhansalleh/filament-shield": "^3.3",
+        "doctrine/dbal": "^4.3",
         "filament/actions": "^3.3",
         "filament/filament": "3.3",
         "filament/tables": "3.3",

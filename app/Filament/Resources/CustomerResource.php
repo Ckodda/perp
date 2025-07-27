@@ -31,6 +31,12 @@ class CustomerResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Select::make('company_id')
+                    ->relationship('company', 'corporate_name')
+                    ->label('Empresa vinculada')
+                    ->required()
+                    ->searchable()
+                    ->preload(),
                 Forms\Components\Select::make('document_type')
                     ->options([
                         'DNI' => 'DNI',
@@ -78,11 +84,11 @@ class CustomerResource extends Resource
                     ->label('Actividad Económica')
                     ->maxLength(255),
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Estado de la Empresa')
+                    ->label('Estado')
                     ->live()
                     ->default(true)
                     ->inline(false)
-                    ->helperText(fn(Get $get) => $get('is_active') ? 'La empresa está ACTIVA.' : 'La empresa está INACTIVA.')
+                    ->helperText(fn(Get $get) => $get('is_active') ? 'El cliente está ACTIVO.' : 'La cliente está INACTIVO  .')
                     ->hiddenOn('create'),
             ]);
     }
@@ -178,6 +184,7 @@ class CustomerResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -187,7 +194,7 @@ class CustomerResource extends Resource
             ])
             ->headerActions([
                 ExportAction::make()
-                    ->label('Exportar Productos')
+                    ->label('Exportar')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->exporter(CustomerExporter::class)
             ]);
