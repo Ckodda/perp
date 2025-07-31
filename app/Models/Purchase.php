@@ -72,6 +72,7 @@ class Purchase extends Model
     public function recalculateTotals(): void
     {
         $subtotalItems = $this->purchaseItems()->sum('subtotal');
+        $this->igv_tax_amount = $this->purchaseItems()->sum('igv_tax_amount');
         $this->subtotal_amount = $subtotalItems;
         $this->total_amount = $subtotalItems + ($this->igv_tax_amount ?? 0);
         $this->save();

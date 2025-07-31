@@ -30,4 +30,16 @@ class ViewPurchase extends ViewRecord
                 ->modalDescription('Advertencia: ¿Está seguro de continuar con la eliminación?')->icon('heroicon-o-trash'),
         ];
     }
+
+    protected function getListeners(): array
+    {
+        return array_merge(parent::getListeners(),[
+            'refreshPurchaseForm'=>'refreshForm'
+        ]);
+    }
+
+    protected function refreshForm(): void
+    {
+        $this->fillForm();
+    }
 }

@@ -17,6 +17,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
+use Malzariey\FilamentDaterangepickerFilter\Filters\DateRangeFilter;
+use Tapp\FilamentValueRangeFilter\Filters\ValueRangeFilter;
 
 class PurchaseResource extends Resource
 {
@@ -39,9 +41,9 @@ class PurchaseResource extends Resource
                             ->relationship('company', 'corporate_name')
                             ->label('Empresa')
                             ->required()
-                            ->default(fn () => Auth::user()->company_id)
+                            ->default(fn() => Auth::user()->company_id)
                             ->disabledOn('edit')
-                            ->dehydrated(fn (?string $state) => filled($state))
+                            ->dehydrated(fn(?string $state) => filled($state))
                             ->searchable()
                             ->preload()
                             ->live(),
@@ -50,7 +52,7 @@ class PurchaseResource extends Resource
                             ->relationship(
                                 'supplier',
                                 'name',
-                                fn (Builder $query, Forms\Get $get) => $query->where('company_id', $get('company_id'))
+                                fn(Builder $query, Forms\Get $get) => $query->where('company_id', $get('company_id'))
                             )
                             ->label('Proveedor')
                             ->required()
@@ -82,9 +84,11 @@ class PurchaseResource extends Resource
                             ->numeric()
                             ->required()
                             ->default(0.00)
-                            ->prefix(fn (Get $get)=> Currency::find($get('currency_id'))->symbol?? '$')
+                            ->prefix(fn(Get $get) => Currency::find($get('currency_id'))->symbol ?? '$')
+                            ->live()
                             ->disabled()
                             ->extraAttributes(['class' => 'font-bold text-lg']),
+
                         Forms\Components\TextInput::make('igv_percentage')
                             ->label('Porcentaje de IGV')
                             ->numeric()
@@ -110,31 +114,32 @@ class PurchaseResource extends Resource
                             ->numeric()
                             ->nullable()
                             ->default(null)
-                            ->prefix(fn (Get $get)=> Currency::find($get('currency_id'))->symbol?? '$')
+                            ->prefix(fn(Get $get) => Currency::find($get('currency_id'))->symbol ?? '$')
                             ->disabled()
                             ->live(),
                         Forms\Components\TextInput::make('total_amount')
                             ->label('Monto Total')
                             ->numeric()
                             ->required()
+                            ->live()
                             ->default(0.00)
-                            ->prefix(fn (Get $get)=> Currency::find($get('currency_id'))->symbol?? '$')
+                            ->prefix(fn(Get $get) => Currency::find($get('currency_id'))->symbol ?? '$')
                             ->disabled()
                             ->afterStateHydrated(function (?Purchase $record, Forms\Components\TextInput $component) {
-                                
+
                                 if ($record) {
                                     $component->state($record->total_amount);
                                 }
                             })
                             ->dehydrateStateUsing(function (Forms\Get $get) {
-                                
+
                                 $subtotal = (float) $get('subtotal_amount');
                                 $igv = (float) $get('igv_tax_amount');
                                 return $subtotal + $igv;
                             })
                             ->extraAttributes(['class' => 'font-bold text-xl text-primary-600']),
 
-                        
+
                         Forms\Components\Select::make('status')
                             ->label('Estado de la Compra')
                             ->enum(PurchaseStatus::class)
@@ -176,11 +181,11 @@ class PurchaseResource extends Resource
                     ->searchable()
                     ->placeholder('N/A'),
 
-                Tables\Columns\TextColumn::make('subtotal_amount') 
+                Tables\Columns\TextColumn::make('subtotal_amount')
                     ->label('Subtotal')
                     ->numeric(decimalPlaces: 2, thousandsSeparator: ',')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('igv_percentage') // <--- ¡NUEVA COLUMNA!
+                Tables\Columns\TextColumn::make('igv_percentage')
                     ->label('IGV %')
                     ->suffix('%')
                     ->sortable(),
@@ -205,8 +210,8 @@ class PurchaseResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->label('Estado')
                     ->badge()
-                    ->formatStateUsing(fn (PurchaseStatus $state): string => $state->getLabel())
-                    ->color(fn (PurchaseStatus $state): string|array|null => $state->getColor())
+                    ->formatStateUsing(fn(PurchaseStatus $state): string => $state->getLabel())
+                    ->color(fn(PurchaseStatus $state): string|array|null => $state->getColor())
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -235,14 +240,19 @@ class PurchaseResource extends Resource
                     ->relationship(
                         'supplier',
                         'name',
-                        fn (Builder $query, Forms\Get $get) => $query->where('company_id', $get('company_id'))
+                        fn(Builder $query, Forms\Get $get) => $query->where('company_id', $get('company_id'))
                     )
                     ->label('Filtrar por Proveedor')
                     ->preload()
                     ->searchable(),
+                
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Filtrar por Estado')
                     ->options(PurchaseStatus::class),
+
+                DateRangeFilter::make('purchase_date')
+                    ->label('Fecha de compra')
+                    ->defaultThisMonth(),
 
                 Tables\Filters\TrashedFilter::make(),
             ])

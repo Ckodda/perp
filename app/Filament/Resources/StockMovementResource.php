@@ -14,6 +14,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
+use Malzariey\FilamentDaterangepickerFilter\Filters\DateRangeFilter;
 
 class StockMovementResource extends Resource
 {
@@ -139,7 +140,7 @@ class StockMovementResource extends Resource
                     ->label('Fecha Movimiento')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: false), // Mostrar por defecto
+                    ->toggleable(isToggledHiddenByDefault: false),
 
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
@@ -172,9 +173,12 @@ class StockMovementResource extends Resource
 
                 Tables\Filters\SelectFilter::make('type')
                     ->label('Filtrar por Tipo')
-                    ->options(StockMovementType::class), // Filtra por el Enum
-
-                Tables\Filters\TrashedFilter::make(), // Para SoftDeletes
+                    ->options(StockMovementType::class),
+                
+                DateRangeFilter::make('created_at')
+                    ->label('Fecha de movimiento')
+                    ->defaultThisMonth(),
+                Tables\Filters\TrashedFilter::make(), 
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

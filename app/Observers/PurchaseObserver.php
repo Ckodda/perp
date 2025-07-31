@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\Journal;
 use App\Models\Purchase;
 use App\Models\StockMovement;
 use App\StockMovementType;
@@ -23,9 +24,9 @@ class PurchaseObserver
      */
     public function updated(Purchase $purchase): void
     {
-        
+
         if ($purchase->isDirty('status') && $purchase->status->value === 'completed' && $purchase->getOriginal('status') !== 'completed') {
-            
+
             DB::transaction(function () use ($purchase) {
                 foreach ($purchase->purchaseItems as $item) {
                     StockMovement::create([
@@ -36,7 +37,7 @@ class PurchaseObserver
                         'quantity' => $item->quantity,
                         'reference' => 'Compra #' . $purchase->invoice_number, // O Purchase ID
                         'notes' => 'Entrada por compra completada. ID de Compra: ' . $purchase->id,
-                        'user_id' => Auth::user()->id ?? null, 
+                        'user_id' => Auth::user()->id ?? null,
                     ]);
 
                     $product = $item->product;

@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('location')->nullable();
             $table->boolean('is_active')->default(true);
 
-            // Nombre del almacén único por empresa
             $table->unique(['name', 'company_id'], 'warehouses_name_unique_by_company');
 
             $table->timestamps();

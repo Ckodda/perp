@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\PurchaseResource\RelationManagers;
 
 use App\Models\Currency;
+use App\Models\Product;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -27,25 +29,46 @@ class PurchaseItemsRelationManager extends RelationManager
                 Forms\Components\Grid::make(2)
                     ->schema([
                         Forms\Components\Select::make('product_id')
-                            ->relationship('product', 'name')
+                            ->relationship(
+                                'product',
+                                'name',
+                                fn(Builder $query) => $query
+                                    ->where('company_id', $this->ownerRecord->company_id)
+                                    ->where('purchase_currency_id', $this->ownerRecord->currency_id)
+                            )
                             ->label('Producto')
                             ->required()
                             ->searchable()
                             ->preload()
                             ->live()
-                            ->options(
-                                fn (Forms\Get $get) => \App\Models\Product::where('company_id', $this->ownerRecord->company_id)
-                                    ->pluck('name', 'id')
-                                    ->toArray()
-                            ),
-                            
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+
+                                $productId = $get('product_id');
+                                if ($productId) {
+                                    $product = Product::find($productId);
+                                    if ($product && $product->purchase_price) {
+
+                                        $set('unit_price', number_format($product->purchase_price, 4, '.', ''));
+                                    } else {
+                                        $set('unit_price', number_format(0, 4, '.', '')); // Resetear si no hay precio de compra
+                                    }
+                                } else {
+                                    $set('unit_price', number_format(0, 4, '.', '')); // Resetear si no hay producto
+                                }
+                                // Recalcular siempre después de actualizar el estado del producto
+                                self::recalculateItemAmounts($get, $set);
+                            }),
+
                         Forms\Components\TextInput::make('quantity')
                             ->label('Cantidad')
                             ->numeric()
                             ->required()
                             ->minValue(0.0001)
                             ->default(1)
-                            ->live()
+                            ->live() // Es importante que sea live para los cálculos
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                self::recalculateItemAmounts($get, $set);
+                            })
                             ->columnSpan(1),
 
                         Forms\Components\TextInput::make('unit_price')
@@ -54,8 +77,25 @@ class PurchaseItemsRelationManager extends RelationManager
                             ->required()
                             ->minValue(0)
                             ->default(0.00)
-                            ->prefix(fn (Get $get)=> Currency::find($this->ownerRecord->currency_id)->symbol?? '$')
+                            ->prefix(fn() => $this->ownerRecord->currency?->symbol ?? '$')
                             ->live()
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                self::recalculateItemAmounts($get, $set);
+                            })
+                            ->columnSpan(1),
+
+                        Forms\Components\TextInput::make('igv_percentage')
+                            ->label('IGV %')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->default(18.00)
+                            ->suffix('%')
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                self::recalculateItemAmounts($get, $set);
+                            })
                             ->columnSpan(1),
 
                         Forms\Components\TextInput::make('subtotal')
@@ -63,17 +103,26 @@ class PurchaseItemsRelationManager extends RelationManager
                             ->numeric()
                             ->readOnly()
                             ->default(0.00)
-                            ->prefix(fn (Get $get)=> Currency::find($this->ownerRecord->currency_id)->symbol?? '$')
-                            ->dehydrateStateUsing(function (Get $get) {
-                                return (float) $get('quantity') * (float) $get('unit_price');
-                            })
-                            ->afterStateHydrated(function (?string $state, Get $get, Forms\Components\TextInput $component) {
-                                
-                                $quantity = (float) $get('quantity');
-                                $unitPrice = (float) $get('unit_price');
-                                $component->state(number_format($quantity * $unitPrice, 2, '.', ''));
-                            })
-                            ->columnSpanFull(),
+                            ->prefix(fn() => $this->ownerRecord->currency?->symbol ?? '$')
+                            ->columnSpan(1)
+                            ->extraInputAttributes(['class' => 'font-bold']),
+
+                        Forms\Components\TextInput::make('igv_tax_amount')
+                            ->label('Monto IGV Ítem')
+                            ->numeric()
+                            ->readOnly()
+                            ->default(0.00)
+                            ->prefix(fn() => $this->ownerRecord->currency?->symbol ?? '$')
+                            ->columnSpan(1),
+
+                        Forms\Components\TextInput::make('total')
+                            ->label('Total Ítem')
+                            ->numeric()
+                            ->readOnly()
+                            ->default(0.00)
+                            ->prefix(fn() => $this->ownerRecord->currency?->symbol ?? '$')
+                            ->columnSpan(1)
+                            ->extraInputAttributes(['class' => 'font-bold text-lg text-primary-600']),
 
                         Forms\Components\RichEditor::make('notes')
                             ->label('Notas del Ítem')
@@ -94,43 +143,40 @@ class PurchaseItemsRelationManager extends RelationManager
                     ->sortable(),
                 Tables\Columns\TextColumn::make('quantity')
                     ->label('Cantidad')
-                    ->numeric(
-                        decimalPlaces: 0,
-                        thousandsSeparator: ',',
-                    )
+                    ->numeric(decimalPlaces: 4, thousandsSeparator: ',')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('unit_price')
                     ->label('Precio Unitario')
-                    ->numeric(
-                        decimalPlaces: 2,
-                        thousandsSeparator: ',',
-                    )
-                    ->prefix(fn ($record)=>$record->purchase->currency?->symbol??'$')
+                    ->numeric(decimalPlaces: 4, thousandsSeparator: ',')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('subtotal')
                     ->label('Subtotal')
-                    ->numeric(
-                        decimalPlaces: 2,
-                        thousandsSeparator: ',',
-                    )
-                    ->prefix(fn ($record)=>$record->purchase->currency?->symbol??'$')
+                    ->numeric(decimalPlaces: 2, thousandsSeparator: ',')
+                    ->sortable()
+                    ->prefix(fn ($record): string => $record->purchase->currency?->symbol ?? '$'),
+
+                Tables\Columns\TextColumn::make('igv_percentage')
+                    ->label('IGV %')
+                    ->suffix('%')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('subtotal_igv')
-                    ->label('Subtotal + IGV')
-                    ->numeric(
-                        decimalPlaces: 2,
-                        thousandsSeparator: ',',
-                    )
-                    ->prefix(fn ($record)=>$record->purchase->currency?->symbol??'$')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('currency.symbol')
+
+                Tables\Columns\TextColumn::make('igv_tax_amount')
+                    ->label('Monto IGV')
+                    ->numeric(decimalPlaces: 2, thousandsSeparator: ',')
+                    ->sortable()
+                    ->prefix(fn ($record): string => $record->purchase->currency?->symbol ?? '$'),
+
+                Tables\Columns\TextColumn::make('total')
+                    ->label('Total Ítem')
+                    ->numeric(decimalPlaces: 2, thousandsSeparator: ',')
+                    ->sortable()
+                    ->prefix(fn ($record): string => $record->purchase->currency?->symbol ?? '$'),
+
+                Tables\Columns\TextColumn::make('purchase.currency.name')
                     ->label('Moneda')
-                    ->default(fn ($record)=> "{$record->purchase->currency?->code} ({$record->purchase->currency->name})" ?? '$')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('notes')
-                    ->label('Notas')
                     ->placeholder('N/A')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->searchable()
+                    ->sortable(),
             ])
             ->filters([
                 //
@@ -139,16 +185,21 @@ class PurchaseItemsRelationManager extends RelationManager
                 Tables\Actions\CreateAction::make()
                     ->after(function () {
                         $this->ownerRecord->recalculateTotals();
+                        $this->dispatch('refreshPurchaseForm');
                     }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->after(function () {
                         $this->ownerRecord->recalculateTotals();
+                        $this->dispatch('refreshPurchaseForm');
+                        
                     }),
                 Tables\Actions\DeleteAction::make()
                     ->after(function () {
                         $this->ownerRecord->recalculateTotals();
+                        $this->dispatch('refreshPurchaseForm');
+                        
                     }),
             ])
             ->bulkActions([
@@ -156,12 +207,28 @@ class PurchaseItemsRelationManager extends RelationManager
                     Tables\Actions\DeleteBulkAction::make()
                         ->after(function () {
                             $this->ownerRecord->recalculateTotals();
+                            $this->dispatch('refreshPurchaseForm');
                         }),
                 ]),
             ]);
     }
 
-    // Asegúrate de que este método exista en tu modelo Purchase para recalcular los totales
+    public static function recalculateItemAmounts(Get $get, Set $set): void
+    {
+        $quantity = (float) $get('quantity');
+        $unitPrice = (float) $get('unit_price');
+        $igvPercentage = (float) $get('igv_percentage');
+
+        $subtotal = $quantity * $unitPrice;
+        $calculatedIgv = ($subtotal * $igvPercentage) / 100;
+        $total = $subtotal + $calculatedIgv;
+
+        $set('subtotal', number_format($subtotal, 2, '.', ''));
+        $set('igv_tax_amount', number_format($calculatedIgv, 2, '.', ''));
+        $set('total', number_format($total, 2, '.', ''));
+    }
+
+
     protected function mutateTableQuery(Builder $query): Builder
     {
         return $query->withoutGlobalScopes([

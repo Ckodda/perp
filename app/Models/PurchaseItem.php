@@ -18,7 +18,9 @@ class PurchaseItem extends Model
         'quantity',
         'unit_price',
         'subtotal',
-        'subtotal_igv',
+        'igv_percentage',
+        'igv_tax_amount',
+        'total',
         'notes',
     ];
 
@@ -26,6 +28,9 @@ class PurchaseItem extends Model
         'quantity' => 'decimal:4',
         'unit_price' => 'decimal:4',
         'subtotal' => 'decimal:2',
+        'igv_percentage'=>'decimal:2',
+        'igv_tax_amount'=>'decimal:2',
+        'total'=>'decimal:2'
     ];
 
     public function purchase(): BelongsTo
