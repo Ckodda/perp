@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CustomerType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,7 @@ class Customer extends Model
 
     protected $fillable = [
         'company_id',
+        'customer_type',
         'document_type',
         'document_number',
         'name',
@@ -31,6 +33,7 @@ class Customer extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'customer_type' => CustomerType::class,
     ];
 
     public function company(): BelongsTo
@@ -40,10 +43,9 @@ class Customer extends Model
     public function getFullNameAttribute(): string
     {
         if ($this->document_type === 'RUC') {
-            return $this->name ?? $this->commercial_name ?? $this->document_number; // Razón social o nombre comercial
+            return $this->name ?? $this->commercial_name ?? $this->document_number; 
         }
 
-        // Para DNI, CE, PASAPORTE, etc.
         return trim("{$this->name} {$this->last_name} {$this->maternal_last_name}");
     }
 

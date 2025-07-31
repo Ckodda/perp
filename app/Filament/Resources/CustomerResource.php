@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\CustomerType;
 use App\Filament\Exports\CustomerExporter;
 use App\Filament\Resources\CustomerResource\Pages;
 use App\Filament\Resources\CustomerResource\RelationManagers;
 use App\Models\Customer;
 use Filament\Forms;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Resources\Resource;
@@ -36,7 +38,15 @@ class CustomerResource extends Resource
                     ->label('Empresa vinculada')
                     ->required()
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->columnSpanFull(),
+                Radio::make('customer_type')
+                    ->label('Tipo de Cliente')
+                    ->options(CustomerType::class)
+                    ->default(CustomerType::INDIVIDUAL)
+                    ->live()
+                    ->required()
+                    ->columnSpanFull(),
                 Forms\Components\Select::make('document_type')
                     ->options([
                         'DNI' => 'DNI',
@@ -44,24 +54,30 @@ class CustomerResource extends Resource
                         'Pasaporte' => 'Pasaporte',
                         'Otro' => 'Otro',
                     ])
+                    ->live()
                     ->required()
                     ->label('Tipo de Documento'),
                 Forms\Components\TextInput::make('document_number')
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->label('Número de Documento')
-                    ->maxLength(255),
+                    ->maxLength(fn (Get $get) => $get('document_type') === 'RUC' ? 11 : ($get('document_type') === 'DNI' ? 8 : 20)),
                 Forms\Components\TextInput::make('name')
-                    ->label('Nombre/Razón Social')
+                    ->label(fn (Get $get): string => $get('customer_type') === CustomerType::COMPANY->value ? 'Razón Social' : 'Nombres')
+                    ->required()
                     ->maxLength(255),
                 Forms\Components\TextInput::make('last_name')
                     ->label('Apellido Paterno')
+                    ->visible(fn (Get $get): bool => $get('customer_type') === CustomerType::INDIVIDUAL->value)
+                    ->required(fn (Get $get): bool => $get('customer_type') === CustomerType::INDIVIDUAL->value)
                     ->maxLength(255),
                 Forms\Components\TextInput::make('maternal_last_name')
                     ->label('Apellido Materno')
+                    ->visible(fn (Get $get): bool => $get('customer_type') === CustomerType::INDIVIDUAL->value)
                     ->maxLength(255),
                 Forms\Components\TextInput::make('commercial_name')
                     ->label('Nombre Comercial')
+                    ->visible(fn (Get $get): bool => $get('customer_type') === CustomerType::COMPANY->value)
                     ->maxLength(255),
                 Forms\Components\TextInput::make('email')
                     ->label('Correo Electrónico')
@@ -73,7 +89,8 @@ class CustomerResource extends Resource
                     ->label('Número de Teléfono'),
                 Forms\Components\TextInput::make('address')
                     ->label('Dirección')
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->columnSpanFull(),
                 Forms\Components\TextInput::make('city')
                     ->label('Ciudad')
                     ->maxLength(255),
@@ -82,13 +99,14 @@ class CustomerResource extends Resource
                     ->maxLength(255),
                 Forms\Components\TextInput::make('economic_activity')
                     ->label('Actividad Económica')
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->columnSpanFull(),
                 Forms\Components\Toggle::make('is_active')
                     ->label('Estado')
                     ->live()
                     ->default(true)
                     ->inline(false)
-                    ->helperText(fn(Get $get) => $get('is_active') ? 'El cliente está ACTIVO.' : 'La cliente está INACTIVO  .')
+                    ->helperText(fn(Get $get) => $get('is_active') ? 'El cliente está ACTIVO.' : 'El cliente está INACTIVO.')
                     ->hiddenOn('create'),
             ]);
     }
@@ -100,6 +118,11 @@ class CustomerResource extends Resource
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
                     ->toggleable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('customer_type')
+                    ->label('Tipo Cliente')
+                    ->badge()
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('document_type')
                     ->label('Tipo de Documento')

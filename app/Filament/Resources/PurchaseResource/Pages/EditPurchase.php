@@ -47,10 +47,9 @@ class EditPurchase extends EditRecord
                 ->body('La compra ha sido aprobada.')
                 ->success()
                 ->send();
-                $this->refreshFormData(['success']);
+                $this->refreshForm();
             })
             ->disabled(fn (Purchase $record):bool=>$record->status === PurchaseStatus::COMPLETED)
-
         ];
     }
 

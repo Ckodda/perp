@@ -35,16 +35,10 @@ class PurchaseObserver
                         'warehouse_id' => null,
                         'type' => StockMovementType::PURCHASE_IN,
                         'quantity' => $item->quantity,
-                        'reference' => 'Compra #' . $purchase->invoice_number, // O Purchase ID
+                        'reference' => 'Compra #' . $purchase->invoice_number,
                         'notes' => 'Entrada por compra completada. ID de Compra: ' . $purchase->id,
                         'user_id' => Auth::user()->id ?? null,
                     ]);
-
-                    $product = $item->product;
-                    if ($product) {
-                        $product->stock += $item->quantity;
-                        $product->save();
-                    }
                 }
             });
         }

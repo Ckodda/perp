@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Product extends Model
 {
     //
-    use HasFactory, SoftDeletes; // Usa el trait SoftDeletes
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'company_id',
@@ -71,9 +71,9 @@ class Product extends Model
         return $this->belongsTo(ProductCategory::class);
     }
     
-    // public function stockMovements(): HasMany
-    // {
-    //     return $this->hasMany(StockMovement::class);
-    // }
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
 
 }
